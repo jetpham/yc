@@ -32,16 +32,13 @@ const handler = (req: NextRequest) =>
     responseMeta(opts) {
       const { paths, errors, type } = opts;
       
-      // Check if this is the YC companies endpoint
-      const isYCCompaniesEndpoint = paths?.some((path) => path.includes('ycCompanies'));
-      
       // Check that no procedures errored
       const allOk = errors.length === 0;
       
       // Check we're doing a query request
       const isQuery = type === 'query';
       
-      if (isYCCompaniesEndpoint && allOk && isQuery) {
+      if ( allOk && isQuery) {
         // Cache request for 1 day + revalidate once every second
         const ONE_DAY_IN_SECONDS = 60 * 60 * 24;
         return {

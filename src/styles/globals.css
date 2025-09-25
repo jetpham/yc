@@ -21,3 +21,8 @@ body {
 h1, h2, h3, h4, h5, h6, p, span, div, a, li, td, th {
   color: white;
 }
+
+/* Button text should use the orange background color */
+button {
+  color: #f26522 !important;
+}

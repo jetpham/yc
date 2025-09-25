@@ -1,7 +1,7 @@
 import "~/styles/globals.css";
 
 import { type Metadata } from "next";
-import { Geist } from "next/font/google";
+import {  Comic_Neue  } from "next/font/google";
 
 import { TRPCReactProvider } from "~/trpc/react";
 
@@ -15,16 +15,17 @@ export const metadata: Metadata = {
   manifest: "/manifest.json",
 };
 
-const geist = Geist({
+const comic_neue = Comic_Neue({
   subsets: ["latin"],
-  variable: "--font-geist-sans",
+  variable: "--font-comic-relief",
+  weight: "300"
 });
 
 export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en" className={`${geist.variable}`}>
+    <html lang="en" className={`${comic_neue.variable}`}>
       <body>
         <TRPCReactProvider>{children}</TRPCReactProvider>
       </body>
