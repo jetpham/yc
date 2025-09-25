@@ -41,7 +41,7 @@ function SearchComponent() {
       setSearchQuery(urlQuery);
     }
     isUpdatingFromURL.current = false;
-  }, [searchParams, searchWord]);
+  }, [searchParams]);
 
   // Update URL when search word changes (debounced)
   const updateURL = useCallback((query: string) => {
