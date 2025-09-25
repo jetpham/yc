@@ -1,7 +1,16 @@
 @import "tailwindcss";
 
+/* Define the Comic Sans MS font face */
+@font-face {
+  font-family: 'Comic Sans MS';
+  src: url('../assets/comic_sans_ms-webfont.woff') format('woff');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
 @theme {
-  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif,
+  --font-sans: 'Comic Sans MS', ui-sans-serif, system-ui, sans-serif,
     "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
 }
 
