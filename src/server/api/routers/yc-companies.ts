@@ -69,8 +69,8 @@ function parseBatchToDecimalYear(batch: string): number {
     return 0;
   }
   
-  const season = parts[0]?.toLowerCase() || '';
-  const year = parseInt(parts[1] || '0');
+  const season = parts[0]?.toLowerCase() ?? '';
+  const year = parseInt(parts[1] ?? '0');
   
   if (isNaN(year)) {
     console.warn(`Could not parse year from batch: ${batch}`);
@@ -129,9 +129,7 @@ export const ycCompaniesRouter = createTRPCRouter({
         const batchMap: Record<string, ParsedYCCompany[]> = {};
         
         companies.forEach((company) => {
-          if (!batchMap[company.batch]) {
-            batchMap[company.batch] = [];
-          }
+          batchMap[company.batch] ??= [];
           batchMap[company.batch]!.push(company);
         });
 

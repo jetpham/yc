@@ -6,11 +6,11 @@ import {  Comic_Neue  } from "next/font/google";
 import { TRPCReactProvider } from "~/trpc/react";
 
 export const metadata: Metadata = {
-  title: "CY",
-  description: "Analyze trends in YC company descriptions",
+  title: "YC Word Correlation",
+  description: "Analyze and visualize trends in YC company descriptions",
   icons: [{ rel: "icon", url: "/favicon.ico" }],
   appleWebApp: {
-    title: "CY",
+    title: "YC Word Correlation",
   },
   manifest: "/manifest.json",
 };

@@ -69,7 +69,7 @@ function calculateSlope(x: number[], y: number[]): number {
   
   const sumX = x.reduce((a, b) => a + b, 0);
   const sumY = y.reduce((a, b) => a + b, 0);
-  const sumXY = x.reduce((sum, xi, i) => sum + xi * (y[i] || 0), 0);
+  const sumXY = x.reduce((sum, xi, i) => sum + xi * (y[i] ?? 0), 0);
   const sumXX = x.reduce((sum, xi) => sum + xi * xi, 0);
   
   const denominator = n * sumXX - sumX * sumX;
@@ -99,12 +99,12 @@ function CorrelationChart({ data }: { data: WordCorrelationResult }) {
       .range([0, width]);
 
     const yScale = d3.scaleLinear()
-      .domain([0, d3.max(data.ratios) as number])
+      .domain([0, d3.max(data.ratios)!])
       .range([height, 0]);
 
     // Line generator
     const line = d3.line<number>()
-      .x((d, i) => xScale(data.decimalYears[i] || 0))
+      .x((d, i) => xScale(data.decimalYears[i] ?? 0))
       .y((d) => yScale(d))
       .curve(d3.curveMonotoneX);
 
@@ -156,7 +156,7 @@ function CorrelationChart({ data }: { data: WordCorrelationResult }) {
       .data(data.ratios)
       .enter().append("circle")
       .attr("class", "dot")
-      .attr("cx", (d, i) => xScale(data.decimalYears[i] || 0))
+      .attr("cx", (d, i) => xScale(data.decimalYears[i] ?? 0))
       .attr("cy", (d) => yScale(d))
       .attr("r", 4)
       .attr("fill", "white")
@@ -178,8 +178,8 @@ function CorrelationChart({ data }: { data: WordCorrelationResult }) {
           .style("opacity", .9);
 
         tooltip.html(`${data.batchLabels[i]}<br/>Frequency: ${(d * 100).toFixed(1)}%`)
-          .style("left", (event.pageX + 10) + "px")
-          .style("top", (event.pageY - 28) + "px");
+          .style("left", ((event as MouseEvent).pageX + 10) + "px")
+          .style("top", ((event as MouseEvent).pageY - 28) + "px");
       })
       .on("mouseout", function() {
         d3.selectAll(".tooltip").remove();
@@ -191,10 +191,10 @@ function CorrelationChart({ data }: { data: WordCorrelationResult }) {
         .x(d => xScale(d[0]))
         .y(d => yScale(d[1]));
 
-      const minYear = d3.min(data.decimalYears) as number;
-      const maxYear = d3.max(data.decimalYears) as number;
-      const meanX = d3.mean(data.decimalYears) as number;
-      const meanY = d3.mean(data.ratios) as number;
+      const minYear = d3.min(data.decimalYears)!;
+      const maxYear = d3.max(data.decimalYears)!;
+      const meanX = d3.mean(data.decimalYears)!;
+      const meanY = d3.mean(data.ratios)!;
       
       // Calculate slope for trendline
       const slope = data.slope || calculateSlope(data.decimalYears, data.ratios);
@@ -230,7 +230,12 @@ function SearchComponent() {
   
   // Initialize search from URL parameters
   const [searchWord, setSearchWord] = useState(() => {
-    return searchParams.get('q') || '';
+    return searchParams.get('q') ?? '';
+  });
+  
+  // Separate state for the actual search query that triggers API calls
+  const [searchQuery, setSearchQuery] = useState(() => {
+    return searchParams.get('q') ?? '';
   });
   
   // Track processing time
@@ -241,9 +246,10 @@ function SearchComponent() {
 
   // Update search state when URL changes (from browser navigation, not our updates)
   useEffect(() => {
-    const urlQuery = searchParams.get('q') || '';
+    const urlQuery = searchParams.get('q') ?? '';
     if (!isUpdatingFromURL.current && urlQuery !== searchWord) {
       setSearchWord(urlQuery);
+      setSearchQuery(urlQuery);
     }
     isUpdatingFromURL.current = false;
   }, [searchParams]);
@@ -251,7 +257,7 @@ function SearchComponent() {
   // Update URL when search word changes (debounced)
   const updateURL = useCallback((query: string) => {
     const params = new URLSearchParams(searchParams.toString());
-    const currentQuery = params.get('q') || '';
+    const currentQuery = params.get('q') ?? '';
     
     // Only update URL if the query actually changed
     if (query.trim() !== currentQuery) {
@@ -266,11 +272,17 @@ function SearchComponent() {
     }
   }, [searchParams, pathname, router]);
 
-  // Update URL immediately when search word changes
+  // Debounced URL update and search query effect
   useEffect(() => {
-    const trimmedSearch = searchWord.trim();
-    updateURL(trimmedSearch);
+    const timeoutId = setTimeout(() => {
+      const trimmedSearch = searchWord.trim();
+      updateURL(trimmedSearch);
+      setSearchQuery(trimmedSearch);
+    }, 300); // 300ms debounce
+
+    return () => clearTimeout(timeoutId);
   }, [searchWord, updateURL]);
+
 
   // Fetch the batch data once (now includes decimal years from backend)
   const { 
@@ -281,7 +293,7 @@ function SearchComponent() {
 
   // Perform client-side analysis using useMemo for performance
   const searchResult = useMemo(() => {
-    if (!batchData || !searchWord.trim()) {
+    if (!batchData || !searchQuery.trim()) {
       setProcessingTime(null);
       return null;
     }
@@ -290,7 +302,7 @@ function SearchComponent() {
     
     try {
       // Data is already sorted chronologically by the backend
-      const searchTerm = searchWord.toLowerCase().trim();
+      const searchTerm = searchQuery.toLowerCase().trim();
       const ratios: number[] = [];
       const decimalYears: number[] = [];
       const batchLabels: string[] = [];
@@ -359,14 +371,23 @@ function SearchComponent() {
       console.error('Error in word correlation analysis:', error);
       return null;
     }
-  }, [batchData, searchWord]);
+  }, [batchData, searchQuery]);
 
   const error = dataError?.message;
   const isSearching = isLoadingData;
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    // The search is handled automatically by the debounced effect
+    // Trigger immediate search by clearing debounce and updating directly
+    const trimmedSearch = searchWord.trim();
+    setSearchQuery(trimmedSearch);
+    updateURL(trimmedSearch);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleSearch(e as any);
+    }
   };
 
   // Show loading animation when data is being fetched initially
@@ -376,10 +397,9 @@ function SearchComponent() {
 
   return (
     <div className="flex flex-col items-center gap-6 max-w-6xl mx-auto p-6">
-      <h2 className="text-3xl font-bold">YC Word Correlation Search</h2>
+      <h2 className="text-3xl font-bold">YC Word Correlation</h2>
       <p className="text-white text-center max-w-2xl">
-        Search for any word to see how its frequency in YC company descriptions has changed over time.
-        The visualization shows correlation trends and statistical significance.
+        Search for a word to find out what percentage of Y Combinator companies in each batch mention it in their company descriptions over time.
       </p>
       
       {/* Search Interface */}
@@ -389,6 +409,7 @@ function SearchComponent() {
             type="text"
             value={searchWord}
             onChange={(e) => setSearchWord(e.target.value)}
+            onKeyDown={handleKeyDown}
             placeholder="Enter a word to search (e.g., 'AI', 'mobile', 'blockchain')"
             className="flex-1 px-4 py-2 rounded-lg border-2 border-white text-white placeholder-white focus:outline-none focus:ring-2 focus:ring-white"
             disabled={isSearching}
@@ -413,7 +434,7 @@ function SearchComponent() {
       {/* No Results Display */}
       {searchResult?.noResults && (
         <div className=" border-2 border-white p-4 rounded-xl w-full max-w-2xl">
-          <p className="text-white">Word "{searchWord.trim()}" not found in any company descriptions. Try a different word or check your spelling.</p>
+          <p className="text-white">Word &quot;{searchWord.trim()}&quot; not found in any company descriptions. Try a different word or check your spelling.</p>
           {processingTime !== null && (
             <p className="text-gray-400 text-sm mt-2">Processing time: {processingTime.toFixed(1)}ms</p>
           )}
@@ -425,7 +446,7 @@ function SearchComponent() {
         <div className="w-full space-y-6">
           {/* Statistics */}
           <div className="border-2 border-white p-6 rounded-xl">
-            <h3 className="text-xl font-semibold mb-4">Analysis Results for "{searchResult.word}"</h3>
+            <h3 className="text-xl font-semibold mb-4">Analysis Results for &quot;{searchResult.word}&quot;</h3>
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-sm">
               <div>
                 <p className="text-gray-400">Correlation</p>
@@ -459,17 +480,6 @@ function SearchComponent() {
             <h3 className="text-xl font-semibold mb-4">Frequency Trend Over Time</h3>
             <CorrelationChart data={searchResult} />
           </div>
-        </div>
-      )}
-
-      {/* Instructions */}
-      {!searchResult && !error && !isSearching && (
-        <div className="border-2 border-white p-6 rounded-xl w-full max-w-2xl text-center">
-          <h3 className="text-lg font-semibold mb-2">How to Use</h3>
-          <p className="text-gray-300 text-sm">
-            Enter any word in the search box above to analyze its frequency trends across YC company descriptions over time. 
-            The system will calculate correlation coefficients and statistical significance, then display an interactive D3 visualization.
-          </p>
         </div>
       )}
     </div>
