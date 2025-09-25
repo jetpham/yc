@@ -1,0 +1,23 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif,
+    "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+}
+
+/* Global styles for background and text color */
+html,
+body {
+  background-color: #f26522;
+  color: white;
+}
+
+/* Ensure all text elements inherit white color by default */
+* {
+  color: inherit;
+}
+
+/* Override any potential dark text colors */
+h1, h2, h3, h4, h5, h6, p, span, div, a, li, td, th {
+  color: white;
+}
