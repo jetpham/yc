@@ -22,6 +22,7 @@
     "@trpc/react-query": "^11.6.0",
     "@trpc/server": "^11.6.0",
     "@types/d3": "^7.4.3",
+    "@vercel/analytics": "^1.5.0",
     "d3": "^7.9.0",
     "d3-delaunay": "^6.0.4",
     "next": "15.5.4",
