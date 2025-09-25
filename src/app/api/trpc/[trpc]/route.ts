@@ -30,7 +30,7 @@ const handler = (req: NextRequest) =>
           }
         : undefined,
     responseMeta(opts) {
-      const { paths, errors, type } = opts;
+      const { errors, type } = opts;
       
       // Check that no procedures errored
       const allOk = errors.length === 0;

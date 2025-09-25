@@ -1,9 +1,26 @@
 "use client";
 
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useRef, useMemo, Suspense, useCallback } from "react";
+import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { api } from "~/trpc/react";
 import * as d3 from "d3";
-import type { WordCorrelationResult, BatchInfo } from "~/server/api/routers/yc-companies";
+import Image from "next/image";
+import type { WordCorrelationResult } from "~/server/api/routers/yc-companies";
+
+// Loading Animation Component
+function LoadingAnimation() {
+  return (
+          <div className="fixed inset-0 flex items-center justify-center z-50">
+            <Image
+              src="/Y_Combinator_logo.svg"
+              alt="Y Combinator Logo"
+              width={256}
+              height={256}
+              className="border-2 border-white animate-spin"
+            />
+          </div>
+  );
+}
 
 // Function to perform Pearson correlation test (moved from server)
 function performCorrelationTest(x: number[], y: number[]): { correlation: number; pValue: number; isSignificant: boolean } {
@@ -205,18 +222,55 @@ function CorrelationChart({ data }: { data: WordCorrelationResult }) {
   );
 }
 
-export default function Home() {
-  const [searchWord, setSearchWord] = useState("");
-  const [debouncedSearchWord, setDebouncedSearchWord] = useState("");
+// Search component that handles URL parameters
+function SearchComponent() {
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
+  
+  // Initialize search from URL parameters
+  const [searchWord, setSearchWord] = useState(() => {
+    return searchParams.get('q') || '';
+  });
+  
+  // Track processing time
+  const [processingTime, setProcessingTime] = useState<number | null>(null);
 
-  // Debounce the search word
+  // Track if we're updating from URL to avoid feedback loops
+  const isUpdatingFromURL = useRef(false);
+
+  // Update search state when URL changes (from browser navigation, not our updates)
   useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      setDebouncedSearchWord(searchWord.trim());
-    }, 300); // 300ms debounce
+    const urlQuery = searchParams.get('q') || '';
+    if (!isUpdatingFromURL.current && urlQuery !== searchWord) {
+      setSearchWord(urlQuery);
+    }
+    isUpdatingFromURL.current = false;
+  }, [searchParams]);
 
-    return () => clearTimeout(timeoutId);
-  }, [searchWord]);
+  // Update URL when search word changes (debounced)
+  const updateURL = useCallback((query: string) => {
+    const params = new URLSearchParams(searchParams.toString());
+    const currentQuery = params.get('q') || '';
+    
+    // Only update URL if the query actually changed
+    if (query.trim() !== currentQuery) {
+      isUpdatingFromURL.current = true;
+      if (query.trim()) {
+        params.set('q', query.trim());
+      } else {
+        params.delete('q');
+      }
+      const newURL = params.toString() ? `${pathname}?${params.toString()}` : pathname;
+      router.push(newURL, { scroll: false });
+    }
+  }, [searchParams, pathname, router]);
+
+  // Update URL immediately when search word changes
+  useEffect(() => {
+    const trimmedSearch = searchWord.trim();
+    updateURL(trimmedSearch);
+  }, [searchWord, updateURL]);
 
   // Fetch the batch data once (now includes decimal years from backend)
   const { 
@@ -227,13 +281,16 @@ export default function Home() {
 
   // Perform client-side analysis using useMemo for performance
   const searchResult = useMemo(() => {
-    if (!batchData || !debouncedSearchWord) {
+    if (!batchData || !searchWord.trim()) {
+      setProcessingTime(null);
       return null;
     }
 
+    const startTime = performance.now();
+    
     try {
       // Data is already sorted chronologically by the backend
-      const searchTerm = debouncedSearchWord.toLowerCase().trim();
+      const searchTerm = searchWord.toLowerCase().trim();
       const ratios: number[] = [];
       const decimalYears: number[] = [];
       const batchLabels: string[] = [];
@@ -262,6 +319,9 @@ export default function Home() {
       // Check if word appears in any companies
       const maxRatio = Math.max(...ratios);
       if (maxRatio === 0) {
+        const endTime = performance.now();
+        setProcessingTime(endTime - startTime);
+        
         return {
           word: searchTerm,
           ratios,
@@ -291,12 +351,15 @@ export default function Home() {
         batchLabels
       };
 
+      const endTime = performance.now();
+      setProcessingTime(endTime - startTime);
+
       return result;
     } catch (error) {
       console.error('Error in word correlation analysis:', error);
       return null;
     }
-  }, [batchData, debouncedSearchWord]);
+  }, [batchData, searchWord]);
 
   const error = dataError?.message;
   const isSearching = isLoadingData;
@@ -306,6 +369,10 @@ export default function Home() {
     // The search is handled automatically by the debounced effect
   };
 
+  // Show loading animation when data is being fetched initially
+  if (isLoadingData) {
+    return <LoadingAnimation />;
+  }
 
   return (
     <div className="flex flex-col items-center gap-6 max-w-6xl mx-auto p-6">
@@ -346,7 +413,10 @@ export default function Home() {
       {/* No Results Display */}
       {searchResult?.noResults && (
         <div className=" border-2 border-white p-4 rounded-xl w-full max-w-2xl">
-          <p className="text-white">Word "{debouncedSearchWord}" not found in any company descriptions. Try a different word or check your spelling.</p>
+          <p className="text-white">Word "{searchWord.trim()}" not found in any company descriptions. Try a different word or check your spelling.</p>
+          {processingTime !== null && (
+            <p className="text-gray-400 text-sm mt-2">Processing time: {processingTime.toFixed(1)}ms</p>
+          )}
         </div>
       )}
 
@@ -356,7 +426,7 @@ export default function Home() {
           {/* Statistics */}
           <div className="border-2 border-white p-6 rounded-xl">
             <h3 className="text-xl font-semibold mb-4">Analysis Results for "{searchResult.word}"</h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-sm">
               <div>
                 <p className="text-gray-400">Correlation</p>
                 <p className={`font-bold ${searchResult.correlation > 0 ? 'text-green-400' : 'text-red-400'}`}>
@@ -373,6 +443,12 @@ export default function Home() {
                 <p className="text-gray-400">Max Frequency</p>
                 <p className="font-bold text-blue-400">
                   {(searchResult.maxRatio * 100).toFixed(1)}%
+                </p>
+              </div>
+              <div>
+                <p className="text-gray-400">Processing Time</p>
+                <p className="font-bold text-yellow-400">
+                  {processingTime !== null ? `${processingTime.toFixed(1)}ms` : 'N/A'}
                 </p>
               </div>
             </div>
@@ -397,5 +473,19 @@ export default function Home() {
         </div>
       )}
     </div>
+  );
+}
+
+// Fallback component for Suspense boundary
+function SearchFallback() {
+  return <LoadingAnimation />;
+}
+
+// Main component with Suspense boundary
+export default function Home() {
+  return (
+    <Suspense fallback={<SearchFallback />}>
+      <SearchComponent />
+    </Suspense>
   );
 }
