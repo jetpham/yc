@@ -41,7 +41,7 @@ function SearchComponent() {
       setSearchQuery(urlQuery);
     }
     isUpdatingFromURL.current = false;
-  }, [searchParams]);
+  }, [searchParams, searchWord]);
 
   // Update URL when search word changes (debounced)
   const updateURL = useCallback((query: string) => {
@@ -175,7 +175,7 @@ function SearchComponent() {
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {
-      handleSearch(e as any);
+      handleSearch(e as React.FormEvent);
     }
   };
 

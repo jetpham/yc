@@ -18,7 +18,7 @@ export function SearchInterface({
   isSearching
 }: SearchInterfaceProps) {
   return (
-    <div className="flex flex-col items-center gap-6 max-w-6xl mx-auto p-6">
+    <div className="flex flex-col items-center gap-2 max-w-6xl mx-auto p-6">
       <h2 className="text-3xl font-bold text-white">YC Word Correlation</h2>
       <p className="text-white text-center max-w-2xl">
         Search for a word to find out what percentage of Y Combinator companies in each batch mention it in their company descriptions over time.

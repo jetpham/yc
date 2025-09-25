@@ -2,7 +2,6 @@
 
 import { useRef, useEffect } from "react";
 import * as d3 from "d3";
-import { Delaunay } from "d3-delaunay";
 import type { WordCorrelationResult } from "~/server/api/routers/yc-companies";
 import { calculateSlope } from "./correlationUtils";
 
@@ -75,7 +74,7 @@ export function CorrelationChart({ data, processingTime }: CorrelationChartProps
       .attr("transform", `translate(${width / 2}, ${height + margin.bottom - 10})`)
       .style("text-anchor", "middle")
       .style("fill", "white")
-      .text("Year");
+      .text("Batch");
 
     // Add the line
     g.append("path")
